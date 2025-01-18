@@ -30,7 +30,21 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
+const verifyToken = (req, res, next) => {
 
+    const token = req.cookies?.token;
+    if (!token) {
+        return res.status(401).send({ message: 'Access denied' });
+    }
+    //verify token
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).send({ message: 'Invalid token' });
+        }
+        req.user = decoded;
+        next()
+    })
+}
 
 
 async function run() {
@@ -38,9 +52,41 @@ async function run() {
         await client.connect();
         console.log("Connected to MongoDB!");
 
+        // Database and Collection references
+        const productsCollection = client.db("products-hunt").collection("products");
+        const reviewCollection = client.db("products-hunt").collection("reviews");
 
 
-        
+
+
+
+
+
+        //! start from here ......................................................
+
+        // !1 product data add to database
+        // Route to add a new product
+        //   !1
+        app.post('/products', async (req, res) => {
+            const product = req.body;
+            product.timestamp = new Date(); // Add timestamp
+            product.votes = []; // Initialize votes as an empty array
+            try {
+                const result = await productsCollection.insertOne(product);
+                res.status(201).json(result);
+            } catch (error) {
+                console.error("Error adding product:", error);
+                res.status(500).json({ message: "Error adding product." });
+            }
+        });
+
+        // !3
+
+        // my products 
+
+
+
+
 
 
     } catch (error) {
