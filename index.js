@@ -58,32 +58,32 @@ async function run() {
 
 
 
+        //JWT auth related api
+        app.post('/jwt', async (req, res) => {
+            const user = req.body;
+            const token = jwt.sign({ ...user, _id: user._id }, process.env.JWT_SECRET, { expiresIn: '5h' })
+
+            res.cookie('token', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+            })
+                .send({ success: true })
+        })
 
 
+        //JWT auth related api
+        app.post('/logout', async (req, res) => {
 
+            res.clearCookie('token', {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
+            })
+                .send({ success: true })
+        })
 
-        //! start from here ......................................................
-
-        // !1 product data add to database
-        // Route to add a new product
-        //   !1
-        app.post('/products', async (req, res) => {
-            const product = req.body;
-            product.timestamp = new Date(); // Add timestamp
-            product.votes = []; // Initialize votes as an empty array
-            try {
-                const result = await productsCollection.insertOne(product);
-                res.status(201).json(result);
-            } catch (error) {
-                console.error("Error adding product:", error);
-                res.status(500).json({ message: "Error adding product." });
-            }
-        });
-
-        // !3
-
-        // my products 
-
+       
 
 
 
