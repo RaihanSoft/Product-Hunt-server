@@ -137,6 +137,44 @@ async function run() {
 
         // !2
 
+        app.get('/products', async (req, res) => {
+            const { search, page = 1, limit = 6 } = req.query;
+            const query = search ? { tags: { $regex: search, $options: 'i' } } : {};
+            const options = {
+                sort: { timestamp: -1 },
+                skip: (page - 1) * limit,
+                limit: parseInt(limit),
+            };
+
+            try {
+                const products = await productsCollection.find(query, options).toArray();
+                res.json(products);
+            } catch (err) {
+                console.error('Error fetching products:', err);
+                res.status(500).json({ message: 'Error fetching products', error: err });
+            }
+        });
+
+        // Route to get product details by ID
+        app.get('/products/:id', async (req, res) => {
+            const { id } = req.params;
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+                if (!product) {
+                    return res.status(404).json({ message: "Product not found." });
+                }
+                res.json(product);
+            } catch (error) {
+                console.error("Error fetching product details:", error);
+                res.status(500).json({ message: "Error fetching product details." });
+            }
+        });
+
+       
 
 
     } catch (error) {
