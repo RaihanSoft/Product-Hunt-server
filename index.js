@@ -94,8 +94,8 @@ async function run() {
         app.post('/products', async (req, res) => {
             const product = req.body;
             product.timestamp = new Date(); // Add timestamp
-            product.votes = []; // Initialize votes as an empty array
-            product.status = "pending"; // Set initial status to pending
+            product.votes = [];
+            product.status = "pending";
             try {
                 const result = await productsCollection.insertOne(product);
                 res.status(201).json(result);
@@ -136,10 +136,30 @@ async function run() {
 
 
         // !2
+        app.get('/all-products', async (req, res) => {
+            const { search, page = 1, limit = 6 } = req.query;
+            const query = search ? { tags: { $regex: search, $options: 'i' } } : {};
+            const options = {
+                sort: { timestamp: -1 },
+                skip: (page - 1) * limit,
+                limit: parseInt(limit),
+            };
+
+            try {
+                const products = await productsCollection.find(query, options).toArray();
+                res.json(products);
+            } catch (err) {
+                console.error('Error fetching products:', err);
+                res.status(500).json({ message: 'Error fetching products', error: err });
+            }
+        });
 
         app.get('/products', async (req, res) => {
             const { search, page = 1, limit = 6 } = req.query;
-            const query = search ? { tags: { $regex: search, $options: 'i' } } : {};
+            const query = {
+                status: { $ne: "pending",  $ne: "rejected" },
+                ...(search && { tags: { $regex: search, $options: 'i' } })
+            };
             const options = {
                 sort: { timestamp: -1 },
                 skip: (page - 1) * limit,
@@ -282,7 +302,35 @@ async function run() {
             }
         });
 
-     
+        // Route to post a review for a product
+        app.post('/reviews', verifyToken, async (req, res) => {
+            const review = req.body;
+            review.timestamp = new Date();
+
+            try {
+                const result = await reviewCollection.insertOne(review);
+                res.status(201).json({ message: "Review posted successfully.", review: result.ops[0] });
+            } catch (error) {
+                console.error("Error posting review:", error);
+                res.status(500).json({ message: "Error posting review." });
+            }
+        });
+
+        // Route to fetch reviews based on product ID
+        app.get('/reviews', async (req, res) => {
+            const { productId } = req.query;
+
+            try {
+                const reviews = await reviewCollection.find({ productId }).toArray();
+                res.status(200).json(reviews);
+            } catch (error) {
+                console.error("Error fetching reviews:", error);
+                res.status(400).json({ message: "Invalid product ID format." });
+            }
+        });
+
+        // Route to update a product
+      
 
 
 
