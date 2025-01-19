@@ -174,8 +174,92 @@ async function run() {
             }
         });
 
-       
+        // Route to upvote a product
+        app.post('/products/:id/upvote', verifyToken, async (req, res) => {
+            const { id } = req.params;
+            const { userEmail } = req.body; // User's email sent from the frontend
 
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+
+                if (!product) {
+                    return res.status(404).json({ message: "Product not found." });
+                }
+
+                // Check if the user has already voted
+                if (product.votes.includes(userEmail)) {
+                    return res.status(400).json({ message: "User has already upvoted this product." });
+                }
+
+                // Update the product document
+                const result = await productsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $push: { votes: userEmail },
+                        $inc: { voteCount: 1 },
+                    }
+                );
+
+                if (result.modifiedCount > 0) {
+                    res.json({ message: "Product upvoted successfully." });
+                } else {
+                    res.status(500).json({ message: "Failed to update product votes." });
+                }
+            } catch (error) {
+                console.error("Error upvoting product:", error);
+                res.status(500).json({ message: "Error upvoting product." });
+            }
+        });
+
+
+        // Unvote route
+        app.post('/products/:id/unvote', verifyToken, async (req, res) => {
+            const { id } = req.params;
+            const { userEmail } = req.body; // User's email sent from the frontend
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const product = await productsCollection.findOne({ _id: new ObjectId(id) });
+
+                if (!product) {
+                    return res.status(404).json({ message: "Product not found." });
+                }
+
+                // Check if the user has already voted
+                if (!product.votes.includes(userEmail)) {
+                    return res.status(400).json({ message: "User hasn't voted on this product yet." });
+                }
+
+                // Remove the user's vote and decrement voteCount
+                const result = await productsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $pull: { votes: userEmail },  // Remove the user's email from the votes array
+                        $inc: { voteCount: -1 },      // Decrement the voteCount by 1
+                    }
+                );
+
+                if (result.modifiedCount > 0) {
+                    const updatedProduct = await productsCollection.findOne({ _id: new ObjectId(id) });
+                    return res.json({ message: "Product unvoted successfully.", updatedProduct });
+                } else {
+                    return res.status(500).json({ message: "Failed to unvote the product." });
+                }
+            } catch (error) {
+                console.error("Error unvoting product:", error);
+                res.status(500).json({ message: "Error unvoting product." });
+            }
+        });
+
+
+    
 
     } catch (error) {
         console.error("Failed to connect to MongoDB:", error);
