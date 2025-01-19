@@ -330,7 +330,59 @@ async function run() {
         });
 
         // Route to update a product
-      
+        app.put('/products/:id', verifyToken, async (req, res) => {
+            const { id } = req.params;
+            const updatedProduct = req.body;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const result = await productsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: updatedProduct }
+                );
+
+                if (result.modifiedCount > 0) {
+                    res.json({ message: "Product updated successfully." });
+                } else {
+                    res.status(404).json({ message: "Product not found." });
+                }
+            } catch (error) {
+                console.error("Error updating product:", error);
+                res.status(500).json({ message: "Error updating product." });
+            }
+        });
+
+        // Route to delete a product
+        app.delete('/products/:id', verifyToken, async (req, res) => {
+            const { id } = req.params;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const result = await productsCollection.deleteOne({ _id: new ObjectId(id) });
+
+                if (result.deletedCount > 0) {
+                    res.json({ message: "Product deleted successfully." });
+                } else {
+                    res.status(404).json({ message: "Product not found." });
+                }
+            } catch (error) {
+                console.error("Error deleting product:", error);
+                res.status(500).json({ message: "Error deleting product." });
+            }
+        });
+
+
+
+
+        //! start from here ......................................................
+
+
 
 
 
