@@ -401,7 +401,29 @@ async function run() {
             res.send(result)
         })
 
-       
+        //! start from here ......................................................
+
+        app.patch('/users/make-moderator/:id', verifyToken, async (req, res) => {
+            const userId = req.params.id;
+            const result = await userCollection.updateOne(
+                { _id: new ObjectId(userId) },
+                { $set: { role: 'moderator' } }
+            );
+            res.send(result);
+        });
+
+
+        app.patch('/users/make-admin/:id', verifyToken, async (req, res) => {
+            const userId = req.params.id;
+            const result = await userCollection.updateOne(
+                { _id: new ObjectId(userId) },
+                { $set: { role: 'admin' } }
+            );
+            res.send(result);
+        });
+
+
+        
 
 
 
