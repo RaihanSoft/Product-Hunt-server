@@ -461,6 +461,37 @@ async function run() {
 
         //! start from here ......................................................
 
+        // Route to update product status
+        app.patch('/products/:id/status', verifyToken, async (req, res) => {
+            const { id } = req.params;
+            const { status } = req.body;
+
+            if (!["accepted", "rejected"].includes(status)) {
+                return res.status(400).json({ error: "Invalid status" });
+            }
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const result = await productsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: { status } }
+                );
+
+                if (result.modifiedCount > 0) {
+                    res.json({ message: "Product status updated successfully." });
+                } else {
+                    res.status(404).json({ message: "Product not found." });
+                }
+            } catch (error) {
+                console.error("Error updating product status:", error);
+                res.status(500).json({ message: "Error updating product status." });
+            }
+        });
+
+        //! start from here ......................................................
 
 
         // starts from here     
