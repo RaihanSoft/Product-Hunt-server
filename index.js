@@ -157,9 +157,10 @@ async function run() {
         app.get('/products', async (req, res) => {
             const { search, page = 1, limit = 6 } = req.query;
             const query = {
-                status: { $ne: "pending",  $ne: "rejected" },
+                status: { $nin: ["pending", "rejected"] },
                 ...(search && { tags: { $regex: search, $options: 'i' } })
             };
+            
             const options = {
                 sort: { timestamp: -1 },
                 skip: (page - 1) * limit,
@@ -423,6 +424,56 @@ async function run() {
         });
 
 
+        //! start from here ......................................................
+
+
+        app.get('/users/admin/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+
+            if (email !== req.user.email) {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let admin = false;
+            if (user) {
+                admin = user.role === 'admin';
+            }
+            res.send({ admin });
+        })
+
+        app.get('/users/moderator/:email', verifyToken, async (req, res) => {
+            const email = req.params.email;
+
+            if (email !== req.user.email) {
+                return res.status(403).send({ message: 'Forbidden access' });
+            }
+
+            const query = { email: email };
+            const user = await userCollection.findOne(query);
+            let moderator = false;
+            if (user) {
+                moderator = user.role === 'moderator';
+            }
+            res.send({ moderator });
+        });
+
+        //! start from here ......................................................
+
+
+
+        // starts from here     
+
+        app.get('/reported-products', verifyToken, async (req, res) => {
+            try {
+                const reportedProducts = await productsCollection.find({ reported: true }).toArray();
+                res.json(reportedProducts);
+            } catch (error) {
+                console.error("Error fetching reported products:", error);
+                res.status(500).json({ message: "Error fetching reported products." });
+            }
+        });
         
 
 
