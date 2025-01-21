@@ -532,6 +532,54 @@ async function run() {
             }
         });
 
+        // Route to update a coupon
+        app.put('/coupons/:id', verifyToken, async (req, res) => {
+            const { id } = req.params;
+            const updatedCoupon = req.body;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const result = await couponsCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $set: updatedCoupon }
+                );
+
+                if (result.modifiedCount > 0) {
+                    res.json({ message: "Coupon updated successfully." });
+                } else {
+                    res.status(404).json({ message: "Coupon not found." });
+                }
+            } catch (error) {
+                console.error("Error updating coupon:", error);
+                res.status(500).json({ message: "Error updating coupon." });
+            }
+        });
+
+        // Route to delete a coupon
+        app.delete('/coupons/:id', verifyToken, async (req, res) => {
+            const { id } = req.params;
+
+            if (!ObjectId.isValid(id)) {
+                return res.status(400).json({ message: "Invalid ID format." });
+            }
+
+            try {
+                const result = await couponsCollection.deleteOne({ _id: new ObjectId(id) });
+
+                if (result.deletedCount > 0) {
+                    res.json({ message: "Coupon deleted successfully." });
+                } else {
+                    res.status(404).json({ message: "Coupon not found." });
+                }
+            } catch (error) {
+                console.error("Error deleting coupon:", error);
+                res.status(500).json({ message: "Error deleting coupon." });
+            }
+        });
+
 
         
 
