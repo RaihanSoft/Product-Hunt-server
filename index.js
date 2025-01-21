@@ -509,18 +509,20 @@ async function run() {
         
         //! start from here ......................................................
 
-        // Route to add a new coupon
         app.post('/coupons', verifyToken, async (req, res) => {
             const coupon = req.body;
             try {
                 const result = await couponsCollection.insertOne(coupon);
-                res.status(201).json(result.ops[0]);
+                res.status(201).json({ 
+                    ...coupon, 
+                    _id: result.insertedId 
+                });
             } catch (error) {
                 console.error("Error adding coupon:", error.message);
                 res.status(500).json({ message: "Error adding coupon", error: error.message });
             }
         });
-
+        
         // Route to fetch all coupons
         app.get('/coupons', verifyToken, async (req, res) => {
             try {
@@ -531,24 +533,25 @@ async function run() {
                 res.status(500).json({ message: "Error fetching coupons." });
             }
         });
+        
 
-        // Route to update a coupon
-        app.put('/coupons/:id', verifyToken, async (req, res) => {
+        app.put('/coupons/:id', async (req, res) => {
             const { id } = req.params;
             const updatedCoupon = req.body;
-
+        
             if (!ObjectId.isValid(id)) {
                 return res.status(400).json({ message: "Invalid ID format." });
             }
-
+        
             try {
-                const result = await couponsCollection.updateOne(
+                const result = await couponsCollection.findOneAndUpdate(
                     { _id: new ObjectId(id) },
-                    { $set: updatedCoupon }
+                    { $set: updatedCoupon },
+                    { returnDocument: "after" } // Return the updated document
                 );
-
-                if (result.modifiedCount > 0) {
-                    res.json({ message: "Coupon updated successfully." });
+        
+                if (result.value) {
+                    res.json(result.value); // Send the updated coupon object
                 } else {
                     res.status(404).json({ message: "Coupon not found." });
                 }
@@ -557,8 +560,8 @@ async function run() {
                 res.status(500).json({ message: "Error updating coupon." });
             }
         });
-
-        // Route to delete a coupon
+        
+        // // Route to delete a coupon
         app.delete('/coupons/:id', verifyToken, async (req, res) => {
             const { id } = req.params;
 
