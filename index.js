@@ -6,6 +6,8 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -161,7 +163,7 @@ async function run() {
                 status: { $nin: ["pending", "rejected"] },
                 ...(search && { tags: { $regex: search, $options: 'i' } })
             };
-            
+
             const options = {
                 sort: { timestamp: -1 },
                 skip: (page - 1) * limit,
@@ -506,23 +508,23 @@ async function run() {
                 res.status(500).json({ message: "Error fetching reported products." });
             }
         });
-        
+
         //! start from here ......................................................
 
         app.post('/coupons', verifyToken, async (req, res) => {
             const coupon = req.body;
             try {
                 const result = await couponsCollection.insertOne(coupon);
-                res.status(201).json({ 
-                    ...coupon, 
-                    _id: result.insertedId 
+                res.status(201).json({
+                    ...coupon,
+                    _id: result.insertedId
                 });
             } catch (error) {
                 console.error("Error adding coupon:", error.message);
                 res.status(500).json({ message: "Error adding coupon", error: error.message });
             }
         });
-        
+
         // Route to fetch all coupons
         app.get('/coupons', verifyToken, async (req, res) => {
             try {
@@ -533,23 +535,23 @@ async function run() {
                 res.status(500).json({ message: "Error fetching coupons." });
             }
         });
-        
+
 
         app.put('/coupons/:id', async (req, res) => {
             const { id } = req.params;
             const updatedCoupon = req.body;
-        
+
             if (!ObjectId.isValid(id)) {
                 return res.status(400).json({ message: "Invalid ID format." });
             }
-        
+
             try {
                 const result = await couponsCollection.findOneAndUpdate(
                     { _id: new ObjectId(id) },
                     { $set: updatedCoupon },
                     { returnDocument: "after" } // Return the updated document
                 );
-        
+
                 if (result.value) {
                     res.json(result.value); // Send the updated coupon object
                 } else {
@@ -560,7 +562,8 @@ async function run() {
                 res.status(500).json({ message: "Error updating coupon." });
             }
         });
-        
+
+
         // // Route to delete a coupon
         app.delete('/coupons/:id', verifyToken, async (req, res) => {
             const { id } = req.params;
@@ -584,7 +587,36 @@ async function run() {
         });
 
 
-        
+        //payment
+        app.post("/create-payment-intent", verifyToken, async (req, res) => {
+            try {
+                const { price } = req.body; // Get price from frontend
+
+                // Validate the price (ensure it's valid and non-negative)
+                if (!price || isNaN(price) || price <= 0) {
+                    return res.status(400).send({ error: "Invalid price value" });
+                }
+
+                // Convert price to cents
+                const amount = parseInt(price * 100);
+                console.log("Payment Amount in Cents:", amount);
+
+                // Create a payment intent
+                const paymentIntent = await stripe.paymentIntents.create({
+                    amount: amount,
+                    currency: "usd",
+                    payment_method_types: ["card"], // Only card payments allowed
+                });
+
+                res.send({ client_secret: paymentIntent.client_secret });
+            } catch (error) {
+                console.error("Error creating payment intent:", error.message);
+                res.status(500).send({ error: "Internal Server Error" });
+            }
+        });
+
+
+
 
     } catch (error) {
         console.error("Failed to connect to MongoDB:", error);
