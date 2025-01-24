@@ -59,6 +59,7 @@ async function run() {
         const reviewCollection = client.db("products-hunt").collection("reviews");
         const userCollection = client.db("products-hunt").collection("users");
         const couponsCollection = client.db("products-hunt").collection("coupons");
+        const paymentsCollection = client.db("products-hunt").collection("payments");
 
 
 
@@ -605,13 +606,33 @@ async function run() {
                 const paymentIntent = await stripe.paymentIntents.create({
                     amount: amount,
                     currency: "usd",
-                    payment_method_types: ["card"], // Only card payments allowed
+                    payment_method_types: ["card"], 
                 });
 
                 res.send({ client_secret: paymentIntent.client_secret });
             } catch (error) {
                 console.error("Error creating payment intent:", error.message);
                 res.status(500).send({ error: "Internal Server Error" });
+            }
+        });
+
+        // Route to store payment details
+        app.post('/payments', verifyToken, async (req, res) => {
+            const { paymentIntentId, amount, status, userEmail } = req.body;
+
+            try {
+                const result = await paymentsCollection.insertOne({
+                    paymentIntentId,
+                    amount,
+                    status,
+                    userEmail,
+                    timestamp: new Date(),
+                });
+
+                res.status(201).json(result);
+            } catch (error) {
+                console.error("Error storing payment details:", error);
+                res.status(500).json({ message: "Error storing payment details." });
             }
         });
 
