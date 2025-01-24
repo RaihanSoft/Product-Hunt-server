@@ -637,6 +637,30 @@ async function run() {
         });
 
 
+        app.get('/myPayment', verifyToken, async (req, res) => {
+            const { email } = req.query;
+
+
+            if (req.user.email !== email) {
+                return res.status(403).send({ message: "Forbidden" })
+            }
+
+
+            if (!email) {
+                return res.status(400).json({ message: "Email query parameter is required." });
+            }
+
+            try {
+                const payment = await paymentsCollection.find({ userEmail: email }).toArray();
+                res.status(200).json(payment);
+            } catch (error) {
+                console.error("Error fetching products:", error);
+                res.status(500).json({ message: "Error fetching products." });
+            }
+        });
+
+
+
 
 
     } catch (error) {
