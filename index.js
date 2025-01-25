@@ -27,6 +27,8 @@ app.use(express.json());
 app.use(cors({
     origin: [
         'http://localhost:5173',
+        'https://product-hunt-9fc9a.web.app',
+        'https://product-hunt-9fc9a.firebaseapp.com'
     ],
     credentials: true,
 }));
@@ -51,7 +53,7 @@ const verifyToken = (req, res, next) => {
 
 async function run() {
     try {
-        await client.connect();
+        // await client.connect();
         console.log("Connected to MongoDB!");
 
         // Database and Collection references
@@ -89,10 +91,6 @@ async function run() {
         })
 
 
-
-        //! start from here ......................................................
-
-        // !1 product data add to database
         // Route to add a new product
         //   !1
         app.post('/products', async (req, res) => {
@@ -527,7 +525,7 @@ async function run() {
         });
 
         // Route to fetch all coupons
-        app.get('/coupons', verifyToken, async (req, res) => {
+        app.get('/coupons',  async (req, res) => {
             try {
                 const coupons = await couponsCollection.find().toArray();
                 res.status(200).json(coupons);
@@ -660,8 +658,36 @@ async function run() {
         });
 
 
-
-
+// Add an endpoint for SSE
+app.get('/events', (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+  
+    // Send an initial event to the client
+    res.write('data: Connected to SSE\n\n');
+  
+    // Function to send updates to the client
+    const sendPaymentUpdate = () => {
+      // You can get updated data from the database here
+      const paymentUpdate = {
+        status: 'succeeded', // Example status, replace with actual DB data
+        message: 'Payment status updated'
+      };
+      
+      res.write(`data: ${JSON.stringify(paymentUpdate)}\n\n`);
+    };
+  
+    // Here, you can listen to any changes in the database and trigger updates
+    const paymentChangeListener = setInterval(sendPaymentUpdate, 5000); // Polling or database change triggers can go here
+    
+    // Clean up on connection close
+    req.on('close', () => {
+      clearInterval(paymentChangeListener);
+      res.end();
+    });
+  });
+  
 
     } catch (error) {
         console.error("Failed to connect to MongoDB:", error);
